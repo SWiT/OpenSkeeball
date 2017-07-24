@@ -1,130 +1,244 @@
-// Open Skeeball v 1.1
-// By: Matthew G. Switlik
-// 2017-07-24
+
+int score, digit_index;
+long current_time, digit_time, digit_delay;
+int digits[4];
+int d;
+
+
+#include "pitches.h"
+int shaveandahaircut_notes[] = {NOTE_C4, NOTE_G3,NOTE_G3, NOTE_A3, NOTE_G3,0, NOTE_B3, NOTE_C4}; // notes in the melody:
+int shaveandahaircut_durations[] = {4,8,8,4,4,4,4,4 }; // note durations: 4 = quarter note, 8 = eighth note, etc.:
+int charge_notes[] = {NOTE_C3, NOTE_E3, NOTE_G3, NOTE_G3, NOTE_E3, NOTE_G3}; // notes in the melody:
+int charge_durations[] = {8, 8, 8, 4, 8, 4}; // note durations: 4 = quarter note, 8 = eighth note, etc.:
+
 
 #include <Servo.h> 
+Servo BallRelease;
+int ClosedPos = 154;
+int OpenPos = 130;
 
-#define BallReleaseOpen 0
-#define BallReleaseClosed 90
+int hole10 = 0;
+int hole20 = 1;
+int hole30 = 2;
+int hole40 = 3;
+int hole50 = 4;
+int hole100 = 5;
+int hole10timer = 0;
+int hole20timer = 0;
+int hole30timer = 0;
+int hole40timer = 0;
+int hole50timer = 0;
+int hole100timer = 0;
 
-#define BallReleasePin 6
+  
+void setup() {                
+  pinMode(13, OUTPUT); //Status LED 
+  
+  pinMode(12, OUTPUT); //7 segment digit
+  pinMode(11, OUTPUT);
+  
+  pinMode(10, OUTPUT); //7 segment value
+  pinMode(9, OUTPUT);
+  pinMode(8, OUTPUT);
+  pinMode(7, OUTPUT);  
+  
+  pinMode(6, OUTPUT);  //Ball Release Servo  
+  pinMode(5, OUTPUT);  //Speaker
 
-#define DA0Pin 7
-#define DA1Pin 8
-#define DA2Pin 9
-#define DA3Pin 10
+  BallRelease.attach(6);
+  BallRelease.write(ClosedPos);
+  delay(15);
+  
+  score = 0;
+  digit_time = 0;
+  digit_delay = 2; //ms
+  digit_index = 0;
+  
+  //Blink Status LED 3 times
+  digitalWrite(13, HIGH);
+  delay(100);
+  digitalWrite(13, LOW);
+  delay(100);
+  digitalWrite(13, HIGH);
+  delay(100);
+  digitalWrite(13, LOW);
+  delay(100);
+  digitalWrite(13, HIGH);
+  delay(100);
+  digitalWrite(13, LOW);
+  
+  //open ball release servo
+  BallRelease.write(OpenPos);
+  //delay(1000);
+  
+  //play start song
+  shaveandahaircut();
+  
+  //Close Ball Relase
+  BallRelease.write(ClosedPos);
+  delay(15);
+  
+  
+}
 
-#define DS0Pin 11
-#define DS1Pin 12
-
-#define LEDPin 13
-
-#define Hole10Pin 14
-#define Hole20Pin 15
-#define Hole30Pin 16
-#define Hole40Pin 17
-#define Hole50Pin 18
-#define Hole100Pin 19
-
-unsigned long MaxThreshold = 200
-
-Servo BallRelease;  //Servo for Ball Release
-byte ServoPos = ServoPosUp;   //degrees for up position
-
-byte nSwitches = 6; //Total Number of Switches
-byte aSwitchPins[]  = {14, 15, 16, 17, 18, 19};
-boolean aSwitchHit[]    = {false,  false, false,  false, false, false};  //var for hit detection
-unsigned long SwitchThreshold[]  = {0,  0,  0,  0, 0, 0}; //var for tracking the length of a hit (decreases false positives)
-                                                          //, 0 means timer not started
-
-
-unsigned long now = 0; //Time of loops beginning
-unsigned long timeLEDOn = 0; //Time the LED has been on
-unsigned int gamescore = 0;
-unsigned int ballCount = 0;
-
-void setup() 
-{ 
-  // Start the serial connection.
-  Serial.begin(9600);
-
-  // Attach the ball release servo.
-  BallRelease.attach(BallReleasePin);
-
-  // Set all the switch pins to inputs
-  for(i=0; i < nSwitches; i++)
-  {
-    pinMode(aSwitchPins[i], INPUT);
+void loop() {
+  current_time = millis();  
+  //score = current_time/1000;
+  
+  //figure out the digits to display
+  int tmpscore = score;
+  digits[0] = tmpscore % 10;
+  tmpscore = tmpscore / 10;
+  digits[1] = tmpscore % 10;
+  tmpscore = tmpscore / 10;
+  digits[2] = tmpscore % 10;
+  tmpscore = tmpscore / 10;
+  digits[3] = tmpscore % 10;
+  
+  //Draw the digit to the 7 segment display
+  if((current_time-digit_time) > digit_delay){
+    digit_time = current_time;
+    d = digits[digit_index];
+    digitalWrite(7, bitRead(d,0));
+    digitalWrite(8, bitRead(d,1));
+    digitalWrite(9, bitRead(d,2));
+    digitalWrite(10,bitRead(d,3));
+    
+    digitalWrite(11, bitRead(digit_index,0));
+    digitalWrite(12, bitRead(digit_index,1));
+    
+    digit_index++;
+    if(digit_index>=4){
+      digit_index = 0;
+    }
   }
 
-  // Set all the 7 segment display pins to outputs.
-  pinMode(DA0Pin, OUTPUT);
-  pinMode(DA1Pin, OUTPUT);
-  pinMode(DA2Pin, OUTPUT);
-  pinMode(DA3Pin, OUTPUT);
-  pinMode(DS0Pin, OUTPUT);
-  pinMode(DS1Pin, OUTPUT);
-
-  // Set the status LED as an output.
-  pinMode(LEDPin, OUTPUT);
-
-  // Blink 5 times at startup.
-  for (byte i = 0; i < 5; i++)
-  {
-    digitalWrite(LEDPin, HIGH);
-    delay(200);
-    digitalWrite(LEDPin, LOW);
-    delay(200);
+  //read analog pins
+  //10 point hole
+  if(analogRead(hole10)<500){
+    if(hole10timer == 0){
+      hole10timer = current_time;
+    }
+    if(current_time - hole10timer > 30){
+      //score!!!
+      score = score + 10;
+      tone(5, NOTE_C3 , 500);
+      hole10timer = 0;
+    }
+  }else{
+    hole10timer = 0;
   }
   
-  Serial.print("OpenSkeeball v1.1\n");
-} 
- 
- 
-void loop() 
-{  
-    now = millis();
-    
-    for(i=0; i < nSwitches; i++)
-    {
-      aSwitchHit[i] = bool(digitalRead(aSwitchPins[i]));
-      Serial.print("Switch:");
-      Serial.print(i);
-      Serial.print(", ");
-      Serial.print(aSwitchHit[i]);
-      Serial.print("\n");
-      
-      if(aSwitchHit[Curr])
-      {
-        if(SwitchThreshold[Curr] == 0)
-        {
-          SwitchThreshold[Curr] = time;
-        }
-        
-        if( (time-SwitchThreshold[Curr]) >= MaxThreshold)
-        {
-          //Hit!!!
-          TotalScore += (10 + Curr*10);
-          digitalWrite(LEDPin, HIGH);
-          timeLEDOn = time;
-          nBalls++;
-          SwitchThreshold[Curr] = 0;
-        }
-      }
-      else
-      {
-        SwitchThreshold[Curr] = 0;
-      }
+  //20 point hole
+  if(analogRead(hole20)<500){
+    if(hole20timer == 0){
+      hole20timer = current_time;
     }
-    
-    //if status LED has been on for proper amount turn it off
-    if(time - timeLEDOn > 1000)
-    {
-      digitalWrite(LEDPin, LOW);
-      timeLEDOn = 0;
+    if(current_time - hole20timer > 30){
+      //score!!!
+      score = score + 20;
+      tone(5, NOTE_E3 , 500);
+      hole20timer = 0;
     }
-    
-    Servo0.write(ServoPos); 
-    delay(1);
-} 
+  }else{
+    hole20timer = 0;
+  }
+  
+  //30 point hole
+  if(analogRead(hole30)<500){
+    if(hole30timer == 0){
+      hole30timer = current_time;
+    }
+    if(current_time - hole30timer > 30){
+      //score!!!
+      score = score + 30;
+      tone(5, NOTE_G3 , 500);
+    }
+  }else{
+    hole30timer = 0;
+  }
+  
+  //40 point hole
+  if(analogRead(hole40)<500){
+    if(hole40timer == 0){
+      hole40timer = current_time;
+    }
+    if(current_time - hole40timer > 30){
+      //score!!!
+      score = score + 40;
+      tone(5, NOTE_B3 , 500);
+    }
+  }else{
+    hole40timer = 0;
+  }
+  
+  //50 point hole
+  if(analogRead(hole50)<500){
+    if(hole50timer == 0){
+      hole50timer = current_time;
+    }
+    if(current_time - hole50timer > 30){
+      //score!!!
+      score = score + 50;
+      tone(5, NOTE_C4 , 500);
+    }
+  }else{
+    hole50timer = 0;
+  }
+  
+  //100 point hole
+  if(analogRead(hole100)<500){
+    if(hole100timer == 0){
+      hole100timer = current_time;
+    }
+    if(current_time - hole100timer > 30){
+      //score!!!
+      score = score + 100;
+      charge();
+    }
+  }else{
+    hole100timer = 0;
+  }
+
+  
+}
+
+void shaveandahaircut() {
+  // iterate over the notes of the melody:
+  for (int thisNote = 0; thisNote < 8; thisNote++) {
+
+    // to calculate the note duration, take one second 
+    // divided by the note type.
+    //e.g. quarter note = 1000 / 4, eighth note = 1000/8, etc.
+    int noteDuration = 1000/shaveandahaircut_durations[thisNote];
+    tone(5, shaveandahaircut_notes[thisNote],noteDuration);
+
+    // to distinguish the notes, set a minimum time between them.
+    // the note's duration + 30% seems to work well:
+    int pauseBetweenNotes = noteDuration * 1.30;
+    delay(pauseBetweenNotes);
+    // stop the tone playing:
+    noTone(5);
+  }
+}
+
+void charge() {
+  // iterate over the notes of the melody:
+  for (int thisNote = 0; thisNote < 8; thisNote++) {
+
+    // to calculate the note duration, take one second 
+    // divided by the note type.
+    //e.g. quarter note = 1000 / 4, eighth note = 1000/8, etc.
+    int noteDuration = 1000/charge_durations[thisNote];
+    tone(5, charge_notes[thisNote],noteDuration);
+
+    // to distinguish the notes, set a minimum time between them.
+    // the note's duration + 30% seems to work well:
+    int pauseBetweenNotes = noteDuration * 1.30;
+    delay(pauseBetweenNotes);
+    // stop the tone playing:
+    noTone(5);
+  }
+}
+
 
