@@ -30,19 +30,25 @@ int charge_notes[] = {NOTE_C3, NOTE_E3, NOTE_G3, NOTE_G3, NOTE_E3, NOTE_G3}; // 
 int charge_durations[] = {8, 8, 8, 4, 8, 4}; // note durations: 4 = quarter note, 8 = eighth note, etc.:
 
 int score;
-byte digit_index;
-unsigned long current_time, digit_time, digit_delay;
-int digits[4];
-int d;
+byte digitindex;
+unsigned long now, digittime, digitdelay;
+byte digits[4];
 
-int hole10timer = 0;
-int hole20timer = 0;
-int hole30timer = 0;
-int hole40timer = 0;
-int hole50timer = 0;
-int hole100timer = 0;
+unsigned long timeblocked = 0;
+unsigned long h10time = 0;
+unsigned long h20time = 0;
+unsigned long h30time = 0;
+unsigned long h40time = 0;
+unsigned long h50time = 0;
+unsigned long h100time = 0;
 
-  
+bool h10ready = false;
+bool h20ready = false;
+bool h30ready = false;
+bool h40ready = false;
+bool h50ready = false;
+bool h100ready = false;
+
 void setup() {                
   pinMode(LED, OUTPUT); //Status LED 
   
@@ -62,9 +68,9 @@ void setup() {
   delay(15);
   
   score = 0;
-  digit_time = 0;
-  digit_delay = 2; //ms
-  digit_index = 0;
+  digittime = 0;
+  digitdelay = 2; //ms
+  digitindex = 0;
   
   //Blink Status LED 3 times
   for (byte i=0; i<3; i++) {
@@ -76,7 +82,6 @@ void setup() {
   
   //open ball release servo
   BallRelease.write(OPENPOS);
-  //delay(1000);
   
   //play start song
   shaveandahaircut();
@@ -89,8 +94,7 @@ void setup() {
 }
 
 void loop() {
-  current_time = millis();  
-  //score = current_time/1000;
+  now = millis();  
   
   //figure out the digits to display
   int tmpscore = score;
@@ -103,113 +107,138 @@ void loop() {
   digits[3] = tmpscore % 10;
   
   //Draw the digit to the 7 segment display
-  if((current_time-digit_time) > digit_delay){
-    digit_time = current_time;
-    d = digits[digit_index];
+  if((now - digittime) > digitdelay){
+    digittime = now;
+    byte d = digits[digitindex];
     digitalWrite(DA0, bitRead(d,0));
     digitalWrite(DA1, bitRead(d,1));
     digitalWrite(DA2, bitRead(d,2));
     digitalWrite(DA3, bitRead(d,3));
     
-    digitalWrite(DS0, bitRead(digit_index,0));
-    digitalWrite(DS1, bitRead(digit_index,1));
+    digitalWrite(DS0, bitRead(digitindex,0));
+    digitalWrite(DS1, bitRead(digitindex,1));
     
-    digit_index++;
-    if(digit_index>=4){
-      digit_index = 0;
+    digitindex++;
+    if(digitindex>=4){
+      digitindex = 0;
     }
   }
 
   //read analog pins
   //10 point hole
   if(analogRead(H10)<500){
-    if(hole10timer == 0){
-      hole10timer = current_time;
+    if(h10time == 0){
+      h10time = now;
     }
-    if(current_time - hole10timer > 30){
+    timeblocked = now - h10time;
+    if(h10ready && timeblocked > 30){
       //score!!!
       score = score + 10;
       tone(SPEAKER, NOTE_C3 , 500);
-      hole10timer = 0;
+      h10time = 0;
+      h10ready = false;
     }
   }else{
-    hole10timer = 0;
+    h10time = 0;
+    h10ready = true;
   }
   
   //20 point hole
   if(analogRead(H20)<500){
-    if(hole20timer == 0){
-      hole20timer = current_time;
+    if(h20time == 0){
+      h20time = now;
     }
-    if(current_time - hole20timer > 30){
+    if(now - h20time > 30){
       //score!!!
       score = score + 20;
       tone(SPEAKER, NOTE_E3 , 500);
-      hole20timer = 0;
+      h20time = 0;
     }
   }else{
-    hole20timer = 0;
+    h20time = 0;
   }
   
   //30 point hole
   if(analogRead(H30)<500){
-    if(hole30timer == 0){
-      hole30timer = current_time;
+    if(h30time == 0){
+      h30time = now;
     }
-    if(current_time - hole30timer > 30){
+    if(now - h30time > 30){
       //score!!!
       score = score + 30;
       tone(SPEAKER, NOTE_G3 , 500);
     }
   }else{
-    hole30timer = 0;
+    h30time = 0;
   }
   
   //40 point hole
   if(analogRead(H40)<500){
-    if(hole40timer == 0){
-      hole40timer = current_time;
+    if(h40time == 0){
+      h40time = now;
     }
-    if(current_time - hole40timer > 30){
+    if(now - h40time > 30){
       //score!!!
       score = score + 40;
       tone(SPEAKER, NOTE_B3 , 500);
     }
   }else{
-    hole40timer = 0;
+    h40time = 0;
   }
   
   //50 point hole
   if(analogRead(H50)<500){
-    if(hole50timer == 0){
-      hole50timer = current_time;
+    if(h50time == 0){
+      h50time = now;
     }
-    if(current_time - hole50timer > 30){
+    if(now - h50time > 30){
       //score!!!
       score = score + 50;
       tone(SPEAKER, NOTE_C4 , 500);
     }
   }else{
-    hole50timer = 0;
+    h50time = 0;
   }
   
   //100 point hole
   if(analogRead(H100)<500){
-    if(hole100timer == 0){
-      hole100timer = current_time;
+    if(h100time == 0){
+      h100time = now;
     }
-    if(current_time - hole100timer > 30){
+    if(now - h100time > 30){
       //score!!!
       score = score + 100;
       charge();
     }
   }else{
-    hole100timer = 0;
+    h100time = 0;
   }
 
   
 }
 
+void checkhole(byte holepin, boolean &holeready, unsigned long &holetimer, byte holeval) {
+  //read analog pins
+  //10 point hole
+  if(analogRead(holepin) < 500){
+    if(holetimer == 0){
+      holetimer = now;
+    }
+    
+    if(holeready && now - holetimer > 30){
+      //score!!!
+      score = score + holeval;
+      tone(SPEAKER, NOTE_C3 , 500);
+      
+      holetimer = 0;
+      holeready = false;
+    }
+  }else{
+    holetimer = 0;
+    holeready = true;
+  }
+}
+  
 void shaveandahaircut() {
   // iterate over the notes of the melody:
   for (int thisNote = 0; thisNote < 8; thisNote++) {
