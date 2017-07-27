@@ -52,10 +52,10 @@ bool h100ready = false;
 void setup() {                
   pinMode(LED, OUTPUT); //Status LED 
   
-  pinMode(DS1, OUTPUT); //7 segment digit
+  pinMode(DS1, OUTPUT); //7 segment digits
   pinMode(DS0, OUTPUT);
   
-  pinMode(DA3, OUTPUT); //7 segment value
+  pinMode(DA3, OUTPUT); //7 segment values
   pinMode(DA2, OUTPUT);
   pinMode(DA1, OUTPUT);
   pinMode(DA0, OUTPUT);  
@@ -124,24 +124,26 @@ void loop() {
     }
   }
 
-  //read analog pins
-  //10 point hole
-  if(analogRead(H10)<500){
-    if(h10time == 0){
-      h10time = now;
-    }
-    timeblocked = now - h10time;
-    if(h10ready && timeblocked > 30){
-      //score!!!
-      score = score + 10;
-      tone(SPEAKER, NOTE_C3 , 500);
-      h10time = 0;
-      h10ready = false;
-    }
-  }else{
-    h10time = 0;
-    h10ready = true;
-  }
+  // Check each hole if it is blocked
+  
+  checkhole(H10, h10ready, h10time, 10, NOTE_C3); //10 point hole
+    
+//  if(analogRead(H10)<500){
+//    if(h10time == 0){
+//      h10time = now;
+//    }
+//    timeblocked = now - h10time;
+//    if(h10ready && timeblocked > 30){
+//      //score!!!
+//      score = score + 10;
+//      tone(SPEAKER, NOTE_C3 , 500);
+//      h10time = 0;
+//      h10ready = false;
+//    }
+//  }else{
+//    h10time = 0;
+//    h10ready = true;
+//  }
   
   //20 point hole
   if(analogRead(H20)<500){
@@ -217,7 +219,7 @@ void loop() {
   
 }
 
-void checkhole(byte holepin, boolean &holeready, unsigned long &holetimer, byte holeval) {
+void checkhole(byte holepin, boolean &holeready, unsigned long &holetimer, byte holeval, unsigned int holesound) {
   //read analog pins
   //10 point hole
   if(analogRead(holepin) < 500){
@@ -228,8 +230,12 @@ void checkhole(byte holepin, boolean &holeready, unsigned long &holetimer, byte 
     if(holeready && now - holetimer > 30){
       //score!!!
       score = score + holeval;
-      tone(SPEAKER, NOTE_C3 , 500);
-      
+
+      if (holesound == CHARGE){
+        charge();
+      } else {
+        tone(SPEAKER, holesound , 500);
+      }
       holetimer = 0;
       holeready = false;
     }
