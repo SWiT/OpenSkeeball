@@ -1,6 +1,7 @@
 #include "pitches.h"
 #include <Servo.h> 
 
+// Arduino pin usage
 #define H10 A0
 #define H20 A1
 #define H30 A2
@@ -15,12 +16,13 @@
 #define DA2 9
 #define DA1 8
 #define DA0 7
-
 #define BALLRELEASE 6
+#define SPEAKER 5
+
+// Constants for the OpenSkeeball shield hardware
 #define CLOSEDPOS 154
 #define OPENPOS 130
-
-#define SPEAKER 5
+#define DIGITDELAY 2
 
 Servo BallRelease;
 
@@ -31,10 +33,10 @@ int charge_durations[] = {8, 8, 8, 4, 8, 4}; // note durations: 4 = quarter note
 
 int score;
 byte digitindex;
-unsigned long now, digittime, digitdelay;
+unsigned long now;
+unsigned long digittime;
 byte digits[4];
 
-unsigned long timeblocked = 0;
 unsigned long h10time = 0;
 unsigned long h20time = 0;
 unsigned long h30time = 0;
@@ -69,24 +71,23 @@ void setup() {
   
   score = 0;
   digittime = 0;
-  digitdelay = 2; //ms
   digitindex = 0;
   
-  //Blink Status LED 3 times
+  // Blink Status LED 3 times
   for (byte i=0; i<3; i++) {
     digitalWrite(LED, HIGH);
-    delay(100);
+    delay(150);
     digitalWrite(LED, LOW);
-    delay(100);
+    delay(150);
   }
   
-  //open ball release servo
+  // Open ball release servo
   BallRelease.write(OPENPOS);
   
-  //play start song
+  // Play start song
   playShaveHaircut();
   
-  //Close Ball Relase
+  // Close Ball Relase
   BallRelease.write(CLOSEDPOS);
   delay(15);
   
@@ -107,7 +108,7 @@ void loop() {
   digits[3] = tmpscore % 10;
   
   //Draw the digit to the 7 segment display
-  if((now - digittime) > digitdelay){
+  if((now - digittime) > DIGITDELAY){
     digittime = now;
     byte d = digits[digitindex];
     digitalWrite(DA0, bitRead(d,0));
@@ -125,37 +126,40 @@ void loop() {
   }
 
   // Check each hole if it is blocked
-  checkhole(H10, h10ready, h10time, 10, NOTE_C3); //10 point hole
-  checkhole(H20, h20ready, h20time, 20, NOTE_E3); //10 point hole
-  checkhole(H30, h30ready, h30time, 30, NOTE_G3); //10 point hole
-  checkhole(H40, h40ready, h40time, 40, NOTE_B3); //10 point hole
-  checkhole(H50, h50ready, h50time, 50, NOTE_C4); //10 point hole
-  checkhole(H100, h100ready, h10time, 10, CHARGE); //10 point hole
+  checkhole(H10, h10ready, h10time, 10, NOTE_C3);     // 10 point hole
+  checkhole(H20, h20ready, h20time, 20, NOTE_E3);     // 20 point hole
+  checkhole(H30, h30ready, h30time, 30, NOTE_G3);     // 30 point hole
+  checkhole(H40, h40ready, h40time, 40, NOTE_B3);     // 40 point hole
+  checkhole(H50, h50ready, h50time, 50, NOTE_C4);     // 50 point hole
+  checkhole(H100, h100ready, h100time, 100, CHARGE);  // 100 point holes
 }
 
 void checkhole(byte holepin, boolean &holeready, unsigned long &holetimer, byte holeval, unsigned int holesound) {
-  //read analog pins
-  //10 point hole
+  // Read analog pin and if it's less than 500 (out of 1023)
   if(analogRead(holepin) < 500){
+    // If the hole's timer isn't set, set it to now
     if(holetimer == 0){
       holetimer = now;
     }
-    
+
+    // If the hole is ready and has been blocked for 30 ms
     if(holeready && now - holetimer > 30){
-      //score!!!
+      // Add the holes value to the score.
       score = score + holeval;
 
+      // Play the sound for the hole.
       if (holesound == CHARGE){
         playCharge();
       } else {
-        tone(SPEAKER, holesound , 500);
+        tone(SPEAKER, holesound, 500);
       }
-      holetimer = 0;
-      holeready = false;
+
+      holetimer = 0;      // Reset the hole's timer
+      holeready = false;  // Set the hole to not ready to prevent multiple scores from one ball.
     }
-  }else{
-    holetimer = 0;
-    holeready = true;
+  }else{    
+    holetimer = 0;    // Reset the hole's timer
+    holeready = true; // The hole needs to be unblocked between scores to be set ready
   }
 }
   
