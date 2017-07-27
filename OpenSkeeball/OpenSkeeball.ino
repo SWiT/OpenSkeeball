@@ -84,7 +84,7 @@ void setup() {
   BallRelease.write(OPENPOS);
   
   //play start song
-  shaveandahaircut();
+  playShaveHaircut();
   
   //Close Ball Relase
   BallRelease.write(CLOSEDPOS);
@@ -125,98 +125,12 @@ void loop() {
   }
 
   // Check each hole if it is blocked
-  
   checkhole(H10, h10ready, h10time, 10, NOTE_C3); //10 point hole
-    
-//  if(analogRead(H10)<500){
-//    if(h10time == 0){
-//      h10time = now;
-//    }
-//    timeblocked = now - h10time;
-//    if(h10ready && timeblocked > 30){
-//      //score!!!
-//      score = score + 10;
-//      tone(SPEAKER, NOTE_C3 , 500);
-//      h10time = 0;
-//      h10ready = false;
-//    }
-//  }else{
-//    h10time = 0;
-//    h10ready = true;
-//  }
-  
-  //20 point hole
-  if(analogRead(H20)<500){
-    if(h20time == 0){
-      h20time = now;
-    }
-    if(now - h20time > 30){
-      //score!!!
-      score = score + 20;
-      tone(SPEAKER, NOTE_E3 , 500);
-      h20time = 0;
-    }
-  }else{
-    h20time = 0;
-  }
-  
-  //30 point hole
-  if(analogRead(H30)<500){
-    if(h30time == 0){
-      h30time = now;
-    }
-    if(now - h30time > 30){
-      //score!!!
-      score = score + 30;
-      tone(SPEAKER, NOTE_G3 , 500);
-    }
-  }else{
-    h30time = 0;
-  }
-  
-  //40 point hole
-  if(analogRead(H40)<500){
-    if(h40time == 0){
-      h40time = now;
-    }
-    if(now - h40time > 30){
-      //score!!!
-      score = score + 40;
-      tone(SPEAKER, NOTE_B3 , 500);
-    }
-  }else{
-    h40time = 0;
-  }
-  
-  //50 point hole
-  if(analogRead(H50)<500){
-    if(h50time == 0){
-      h50time = now;
-    }
-    if(now - h50time > 30){
-      //score!!!
-      score = score + 50;
-      tone(SPEAKER, NOTE_C4 , 500);
-    }
-  }else{
-    h50time = 0;
-  }
-  
-  //100 point hole
-  if(analogRead(H100)<500){
-    if(h100time == 0){
-      h100time = now;
-    }
-    if(now - h100time > 30){
-      //score!!!
-      score = score + 100;
-      charge();
-    }
-  }else{
-    h100time = 0;
-  }
-
-  
+  checkhole(H20, h20ready, h20time, 20, NOTE_E3); //10 point hole
+  checkhole(H30, h30ready, h30time, 30, NOTE_G3); //10 point hole
+  checkhole(H40, h40ready, h40time, 40, NOTE_B3); //10 point hole
+  checkhole(H50, h50ready, h50time, 50, NOTE_C4); //10 point hole
+  checkhole(H100, h100ready, h10time, 10, CHARGE); //10 point hole
 }
 
 void checkhole(byte holepin, boolean &holeready, unsigned long &holetimer, byte holeval, unsigned int holesound) {
@@ -232,7 +146,7 @@ void checkhole(byte holepin, boolean &holeready, unsigned long &holetimer, byte 
       score = score + holeval;
 
       if (holesound == CHARGE){
-        charge();
+        playCharge();
       } else {
         tone(SPEAKER, holesound , 500);
       }
@@ -245,7 +159,7 @@ void checkhole(byte holepin, boolean &holeready, unsigned long &holetimer, byte 
   }
 }
   
-void shaveandahaircut() {
+void playShaveHaircut() {
   // iterate over the notes of the melody:
   for (int thisNote = 0; thisNote < 8; thisNote++) {
 
@@ -264,7 +178,7 @@ void shaveandahaircut() {
   }
 }
 
-void charge() {
+void playCharge() {
   // iterate over the notes of the melody:
   for (int thisNote = 0; thisNote < 6; thisNote++) {
 
